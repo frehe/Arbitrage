@@ -2,16 +2,14 @@ import poloniex
 
 api_key = ''
 api_secret = ''
+whitelistedWithdrawAdress = ''
 
-#p = poloniex_background.poloniex(api_key,api_secret)
+BTC_whitelistedWithdrawAdress = ''
+LTC_whitelistedWithdrawAdress = ''
+ETH_whitelistedWithdrawAdress = ''
+BCH_whitelistedWithdrawAdress = ''
 
 polo = poloniex.Poloniex(api_key, api_secret)
-
-#print(p.returnOrderBook('BTC_LTC'))
-
-
-#print(polo.returnTicker()['BTC_ETH'])
-
 
 #######################################################################################
 
@@ -24,8 +22,7 @@ def priceCheck(pair):
 		lowest_ask = float(polo.returnTicker()['BTC_LTC']['lowestAsk'])
 	else:
 		sys.exit('Could not get Poloniex price data for ' + pair)
-		#highest_bid = lowest_ask = 0
-	
+
 	result = [highest_bid, lowest_ask]
 	return result
 
@@ -34,18 +31,45 @@ def priceCheck(pair):
 
 
 def buyTrade(b_rate, b_size, b_product):
-	buy_order_number = polo.buy(b_product, b_rate, b_size)
-	return buy_order
+	if (b_product == 'LTC-BTC'):
+		prod_id = 'BTC_LTC'
+		buy_order_number = polo.buy(prod_id, b_rate, b_size)
+		return buy_order
+	else:
+		sys.exit('Error generating buy trade on Poloniex')
+
 def sellTrade(s_rate, s_size, s_product):
- 	sell_order = polo.sell(s_product, s_rate, s_size)
- 	return sell_order
+	if (s_product == 'LTC-BTC'):
+		prod_id = 'LTC-BTC'
+		sell_order = polo.sell(prod_id, s_rate, s_size)
+ 		return sell_order
+	else:
+		sys.exit('Error generating sell trade on Poloniex')
+
 def cancelOrders(product_identifier):
 	order_id = polo.returnOpenOrders(currencyPair)
 	return polo.cancel(product_identifier, order_id)
+
 def getOrderInfo(order_id):
  	print('nothing')
  	return 0
 
+def withdrawToAdress(adr, cur, amount):
+	"Double check every withdrawal to be sure and then withdraw"
+
+	if ((adr == BTC_whitelistedWithdrawAdress) & (cur == 'BTC')):
+		# BTC Withdrawal
+		pass
+	elif ((adr == LTC_whitelistedWithdrawAdress) & (cur == 'LTC')):
+		# LTC Withdrawal
+		pass
+	elif ((adr == ETH_whitelistedWithdrawAdress) & (cur == 'ETH')):
+		# ETH Withdrawal
+		pass
+	elif ((adr == BCH_whitelistedWithdrawAdress) & (cur == 'BCH')):
+		# BCH Withdrawal
+		pass
+	pass
 
 #######################################################################################
 

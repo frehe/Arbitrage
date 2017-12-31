@@ -3,12 +3,16 @@ import gdax
 import json
 import base64, hashlib, hmac, time
 
-api_key = ""
-api_passphrase = ""
-api_secret = ""
+api_key = ''
+api_passphrase = ''
+api_secret = ''
+
+BTC_whitelistedWithdrawAdress = ''
+LTC_whitelistedWithdrawAdress = ''
+ETH_whitelistedWithdrawAdress = ''
+BCH_whitelistedWithdrawAdress = ''
 
 auth_client = gdax.AuthenticatedClient(api_key, api_secret, api_passphrase)
-
 
 #######################################################################################
 
@@ -24,14 +28,14 @@ def priceCheck(pair):
 		lowest_ask = float(auth_client.get_product_ticker(product_id='LTC-BTC')['ask'])
 	else:
 		sys.exit('Could not get gdax price data for gdax')
-	
+
 	result = [highest_bid, lowest_ask]
 	return result
 
 
 #######################################################################################
 
-	
+
 def performTrade(pair,buy_sell,type):
 	"Perform a trade on gdax"
 	return 11
@@ -82,16 +86,42 @@ def checkFunds(currency):
 
 
 def buyLimitTrade(b_price, b_size, b_product):
-	return auth_client.buy(price = b_price, size = b_size, product_id = b_product, type = 'limit', post_only = True)
-
+	if (b_product == 'LTC-BTC'):
+		return auth_client.buy(price = b_price, size = b_size, product_id = b_product, type = 'limit', post_only = True)
+	else:
+		sys.exit('Error generating limit sell trade on GDAX')
+		
 def sellLimitTrade(s_price, s_size, s_product):
-	return auth_client.sell(price = s_price, size = s_size, product_id = s_product, type = 'limit', post_only = True)
+	if (s_product == 'LTC-BTC'):
+		return auth_client.sell(price = s_price, size = s_size, product_id = s_product, type = 'limit', post_only = True)
+	else:
+		sys.exit('Error generating limit sell trade on GDAX')
 
 def cancelOrders(product_identifier):
 	return auth_client.cancel_all(product = product_identifier)
 
 def getOrderInfo(order_id):
 	return auth_client.get_order(order_id)
+
+def withdrawToCoinbase(cur, amount):
+	pass
+
+def withdrawToAdress(adr, cur, amount):
+	"Double check every withdrawal to be sure and then withdraw"
+
+	if ((adr == BTC_whitelistedWithdrawAdress) & (cur == 'BTC')):
+		# BTC Withdrawal
+		pass
+	elif ((adr == LTC_whitelistedWithdrawAdress) & (cur == 'LTC')):
+		# LTC Withdrawal
+		pass
+	elif ((adr == ETH_whitelistedWithdrawAdress) & (cur == 'ETH')):
+		# ETH Withdrawal
+		pass
+	elif ((adr == BCH_whitelistedWithdrawAdress) & (cur == 'BCH')):
+		# BCH Withdrawal
+		pass
+	pass
 
 #######################################################################################
 
@@ -100,7 +130,7 @@ def getOrderInfo(order_id):
 def main():
 	#prices = priceCheck('LTC-EUR')
 	#print(prices)
-	
+
 	#print(sellLimitTrade(0.2, 0.01, 'LTC-BTC'))
 	#iddd = buyLimitTrade(0.0001, 0.01, 'LTC-BTC')['id']
 	#print(getOrderInfo(iddd))
