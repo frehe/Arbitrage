@@ -1,16 +1,11 @@
 #!/usr/bin/python
 import gdax
 import json
-import base64, hashlib, hmac, time
+import base64, hashlib, hmac, time, sys
 
 api_key = ''
 api_passphrase = ''
 api_secret = ''
-
-BTC_whitelistedWithdrawAdress = ''
-LTC_whitelistedWithdrawAdress = ''
-ETH_whitelistedWithdrawAdress = ''
-BCH_whitelistedWithdrawAdress = ''
 
 auth_client = gdax.AuthenticatedClient(api_key, api_secret, api_passphrase)
 
@@ -46,41 +41,27 @@ def performTrade(pair,buy_sell,type):
 
 def checkFunds(currency):
 	"Obtain balance on gdax for a given currency"
-	print("Checking funds on GDAX: " + currency)
-	if currency == 'EUR':
-		account = auth_client.get_accounts()[0];
-		# Make sure that the order of display in gdax's returned json data (i.e. EUR stands at index 0) is consistent. If not, abort.
-		if account['currency'] == 'EUR':
-			return float(account['balance'])
-		else:
-			sys.exit('Error trying to obtain current funds (EUR) on gdax')
-	elif currency == 'ETH':
-		account = auth_client.get_accounts()[1];
-		if account['currency'] == 'ETH':
-			return float(account['balance'])
-		else:
-			sys.exit('Error trying to obtain current funds (ETH) on gdax')
-	elif currency == 'BTC':
-		account = auth_client.get_accounts()[2];
-		if account['currency'] == 'BTC':
-			return float(account['balance'])
-		else:
-			sys.exit('Error trying to obtain current funds (BTC) on gdax')
-	elif currency == 'LTC':
-		account = auth_client.get_accounts()[3];
-		if account['currency'] == 'LTC':
-			return float(account['balance'])
-		else:
-			sys.exit('Error trying to obtain current funds (LTC) on gdax')
-	elif currency == 'BCH':
-		account = auth_client.get_accounts()[4];
-		if account['currency'] == 'BCH':
-			return float(account['balance'])
-		else:
-			sys.exit('Error trying to obtain current funds (BCH) on gdax')
-	else:
-		sys.exit('Could not get current funds on gdax')
 
+	print("Checking funds on GDAX: " + currency)
+
+	all_accounts = auth_client.get_accounts()
+	# There are (currently) 5 currencies on GDAX wallets:
+	for current_account in all_accounts:
+		if (current_account['currency'] == currency):
+			return float(current_account['balance'])
+
+	sys.exit('Error trying to obtain current funds ' + currency + ' on GDAX')
+
+
+#######################################################################################
+
+def getQuoteIncrement(tradingPair):
+	products = auth_client.get_products()
+	for current_pair in products:
+		if (current_pair['id'] == tradingPair):
+			return float(current_pair['quote_increment'])
+
+	sys.exit('Unable to fetch quote increment data for ' + tradingPair)
 
 #######################################################################################
 
@@ -90,7 +71,7 @@ def buyLimitTrade(b_price, b_size, b_product):
 		return auth_client.buy(price = b_price, size = b_size, product_id = b_product, type = 'limit', post_only = True)
 	else:
 		sys.exit('Error generating limit sell trade on GDAX')
-		
+
 def sellLimitTrade(s_price, s_size, s_product):
 	if (s_product == 'LTC-BTC'):
 		return auth_client.sell(price = s_price, size = s_size, product_id = s_product, type = 'limit', post_only = True)
@@ -109,23 +90,15 @@ def withdrawToCoinbase(cur, amount):
 def withdrawToAdress(adr, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
-	if ((adr == BTC_whitelistedWithdrawAdress) & (cur == 'BTC')):
-		# BTC Withdrawal
-		pass
-	elif ((adr == LTC_whitelistedWithdrawAdress) & (cur == 'LTC')):
-		# LTC Withdrawal
-		pass
-	elif ((adr == ETH_whitelistedWithdrawAdress) & (cur == 'ETH')):
-		# ETH Withdrawal
-		pass
-	elif ((adr == BCH_whitelistedWithdrawAdress) & (cur == 'BCH')):
-		# BCH Withdrawal
-		pass
-	pass
+	print('Withdrawing ' + str(amount) + cur + ' to ' + adr)
+
+	result = auth_client.crypto_withdraw(amount = str(amount), currency = cur, crypto_address = adr)
+	print(str(result))
+
 
 #######################################################################################
 
-'''
+
 
 def main():
 	#prices = priceCheck('LTC-EUR')
@@ -135,8 +108,9 @@ def main():
 	#iddd = buyLimitTrade(0.0001, 0.01, 'LTC-BTC')['id']
 	#print(getOrderInfo(iddd))
 	#print(cancelOrders('LTC-BTC'))
-
+	#print(checkFunds('LTC'))
+	#print(str(getQuoteIncrement('LTC-BTC') * 100))
+	pass
 
 if __name__ == "__main__":
 	main()
-'''

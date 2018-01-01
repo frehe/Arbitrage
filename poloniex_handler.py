@@ -1,13 +1,9 @@
+#!/usr/bin/python
 import poloniex
+import sys
 
 api_key = ''
 api_secret = ''
-whitelistedWithdrawAdress = ''
-
-BTC_whitelistedWithdrawAdress = ''
-LTC_whitelistedWithdrawAdress = ''
-ETH_whitelistedWithdrawAdress = ''
-BCH_whitelistedWithdrawAdress = ''
 
 polo = poloniex.Poloniex(api_key, api_secret)
 
@@ -34,15 +30,15 @@ def buyTrade(b_rate, b_size, b_product):
 	if (b_product == 'LTC-BTC'):
 		prod_id = 'BTC_LTC'
 		buy_order_number = polo.buy(prod_id, b_rate, b_size)
-		return buy_order
+		return buy_order_number
 	else:
 		sys.exit('Error generating buy trade on Poloniex')
 
 def sellTrade(s_rate, s_size, s_product):
-	if (s_product == 'LTC-BTC'):
-		prod_id = 'LTC-BTC'
-		sell_order = polo.sell(prod_id, s_rate, s_size)
- 		return sell_order
+	if(s_product == 'LTC-BTC'):
+		prod_id = 'BTC_LTC'
+		sell_order_number = polo.sell(prod_id, s_rate, s_size)
+		return sell_order_number
 	else:
 		sys.exit('Error generating sell trade on Poloniex')
 
@@ -57,19 +53,9 @@ def getOrderInfo(order_id):
 def withdrawToAdress(adr, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
-	if ((adr == BTC_whitelistedWithdrawAdress) & (cur == 'BTC')):
-		# BTC Withdrawal
-		pass
-	elif ((adr == LTC_whitelistedWithdrawAdress) & (cur == 'LTC')):
-		# LTC Withdrawal
-		pass
-	elif ((adr == ETH_whitelistedWithdrawAdress) & (cur == 'ETH')):
-		# ETH Withdrawal
-		pass
-	elif ((adr == BCH_whitelistedWithdrawAdress) & (cur == 'BCH')):
-		# BCH Withdrawal
-		pass
-	pass
+	print('Withdrawing ' + str(amount) + cur + ' to ' + adr)
+	result =  polo.withdraw(currency = cur, amount = str(amount), address = adr, paymentId=False)
+	print(result)
 
 #######################################################################################
 
@@ -87,8 +73,10 @@ def checkFunds(currency):
 def main():
 	#result = buyTakerTrade(0.1, "LTCXBT")
 	#print('Result: ' + str(result))
-	print('okay')
-	print(checkFunds('LTC'))
+	#print('okay')
+	#print('Funds LTC: ' + str(checkFunds('LTC')))
+	#withdrawToAdress('LMVW3R4FFrM4Bgyg9UqaxK5gkQdVYb28QK', 'LTC', 0.0011)
+	pass
 
 
 if __name__ == "__main__":

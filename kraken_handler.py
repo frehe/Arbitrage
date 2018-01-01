@@ -1,15 +1,10 @@
 #!/usr/bin/python
 import krakenex
 from pykrakenapi import KrakenAPI
+import sys
 
 api_key = ''
 api_secret = ''
-whitelistedWithdrawAdress = ''
-
-BTC_whitelistedWithdrawAdress = ''
-LTC_whitelistedWithdrawAdress = ''
-ETH_whitelistedWithdrawAdress = ''
-BCH_whitelistedWithdrawAdress = ''
 
 api = krakenex.API(key = api_key, secret = api_secret)
 k = KrakenAPI(api)
@@ -62,19 +57,10 @@ def getOrderInfo(order_id):
 def withdrawToAdress(adr, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
-	if ((adr == BTC_whitelistedWithdrawAdress) & (cur == 'BTC')):
-		# BTC Withdrawal
-		pass
-	elif ((adr == LTC_whitelistedWithdrawAdress) & (cur == 'LTC')):
-		# LTC Withdrawal
-		pass
-	elif ((adr == ETH_whitelistedWithdrawAdress) & (cur == 'ETH')):
-		# ETH Withdrawal
-		pass
-	elif ((adr == BCH_whitelistedWithdrawAdress) & (cur == 'BCH')):
-		# BCH Withdrawal
-		pass
-	pass
+	print('Withdrawing ' + str(amount) + cur + ' to ' + adr)
+	result = api.query_private('Withdraw', data = {'asset': cur, 'key': adr, 'amount': str(amount)})
+	print(result)
+
 
 
 #######################################################################################
@@ -115,12 +101,14 @@ def checkFunds(currency):
 
 
 #######################################################################################
-
+'''
 def main():
-	result = buyTakerTrade(0.1, "LTCXBT")
-	print('Result: ' + str(result))
-
+	#result = buyTakerTrade(0.1, "LTCXBT")
+	#print('Result: ' + str(result))
+	print('LTC funds: ' + str(checkFunds('LTC')))
+	#withdrawToAdress('GDAX', 'LTC', 0.0011)
 
 
 if __name__ == "__main__":
 	main()
+'''
