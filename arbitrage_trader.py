@@ -4,15 +4,46 @@ import json
 import base64, hashlib, hmac, time, math, sys
 import gdax_handler
 import kraken_handler
+import numpy as np
+from random import randint
+
+######################
+# Due to the difficulty of retreiving historic highest bid / lowest ask historic data
+# backtesting must be conducted in real time
+# The difference is that one starts with an imaginary amount of currency and
+# imaginary exchanges
+backtesting = True
+######################
+
+
+#############################
+# Parameters - Change these if wanted
+
+baseCurrency = 'BTC'
+buyCurrency = 'LTC'
+buyFee = 0.0026 # Taker Fee - Kraken - LTC/BTC
+sellFee = 0.000 # Maker Fee - GDAX - LTC/BTC
+baseCurrencyTransferFee = 0.000 # Withdraw Fee - GDAX - BTC
+buyCurrencyTransferFee = 0.001 # Withdraw Fee - Kraken - LTC
+buyExchange = 'Kraken' # Alternatively 'Poloniex'
+sellExchange = 'GDAX' # DO NOT CHANGE!!!!
+
+#############################
+
+'''
+The saved account files 'GDAX_Backtesting_Accounts.npy', 'Kraken_Backtesting_Accounts.npy', 'Poloniex_Backtesting_Accounts.npy'
+accumulate data as {'BTC': 0.0, 'LTC': 0.0, 'ETH': 0.0, 'BCH': 0.0, 'EUR': 0.0}
+'''
+######################
 
 # GDAX
 GDAX_BTC_whitelistedWithdrawAddress = ''
-GDAX_LTC_whitelistedWithdrawAddress = ''
+GDAX_LTC_whitelistedWithdrawAddress = 'LauE97bMZgRXabd9oG22bDVsVHoSVWNhjj'
 GDAX_ETH_whitelistedWithdrawAddress = ''
 GDAX_BCH_whitelistedWithdrawAddress = ''
 
 # Kraken
-Kraken_BTC_whitelistedWithdrawAddress = ''
+Kraken_BTC_whitelistedWithdrawAddress = '3KJS1E4jRmhgz9Z9mPnb39HSunG12Tfhmy'
 Kraken_LTC_whitelistedWithdrawAddress = ''
 Kraken_ETH_whitelistedWithdrawAddress = ''
 Kraken_BCH_whitelistedWithdrawAddress = ''
@@ -47,7 +78,7 @@ def getAllPrices(baseCur, buyCur, buyExchange, sellExchange):
 		poloniex_prices = poloniex_handler.priceCheck(buyCur + '-' + baseCur)
 		buy_rate = poloniex_prices[1]
 	else:
-		sys.exit('Could not recognize buyExchange in getALlPrices')
+		sys.exit('Could not recognize buyExchange in getAllPrices')
 
 	# Maker sell will execute on highest bid + smallest quote increment
 	# This is the worst price at which a maker order can be placed
@@ -76,13 +107,17 @@ def getAllPrices(baseCur, buyCur, buyExchange, sellExchange):
 def performArbitrageTrade(baseCur, buyCur, buy_amount, sell_amount, buyPrice, sellPrice, buyExchange, sellExchange):
 	"The actual trading procedure"
 
+	print('Let \'s start the actual trading procedure')
 	# Buy trade
 	buy_id = 0
 	if (buyExchange == 'Kraken'):
-		buy_message = kraken_handler.buyTakerTrade(buy_amount, buyCur + '-' + baseCur)
-		buy_id = buy_message['txid'][0]
+		buy_message = kraken_handler.buyTakerTrade(buyPrice, buy_amount, buyCur + '-' + baseCur)
+		print('Buy message: ' + str(buy_message))
+		buy_id = buy_message['descr']
+		print(buy_id)
 	elif (buyExchange == 'Poloniex'):
 		buy_message = poloniex_handler.buyTrade(buyPrice, buy_amount, buyCur + '-' + baseCur)
+		print('Buy message: ' + str(buy_message))
 		buy_id = buy_message
 	else:
 		sys.exit('Could not recognize buyExchange during trade')
@@ -90,7 +125,9 @@ def performArbitrageTrade(baseCur, buyCur, buy_amount, sell_amount, buyPrice, se
 	# Sell trade
 	sell_id = 0
 	if (sellExchange == 'GDAX'):
+		sell_amount = round(sell_amount - float(5e-7), 6)
 		sell_message = gdax_handler.sellLimitTrade(sellPrice, sell_amount, buyCur + '-' + baseCur)
+		print('Sell message: ' + str(sell_message))
 		sell_id = sell_message['id']
 	else:
 		sys.exit('Could not recognize sellExchange during trade')
@@ -99,6 +136,7 @@ def performArbitrageTrade(baseCur, buyCur, buy_amount, sell_amount, buyPrice, se
 	if([buy_id, sell_id] == [0, 0]):
 		sys.exit('Cannot perform arbitrage trade')
 	else:
+		print('Trades generated. Buy ID: ' + str(buy_id) + ', Sell ID: ' + str(sell_id))
 		return [buy_id, sell_id] # Success
 
 
@@ -155,7 +193,7 @@ def withdraw(from_exchange, to_exchange, currency, amount):
 				sys.exit('There was a withdrawal error. Withdrawal address was not set.')
 			else:
 				print('Withdrawing from ' + from_exchange + ': ' + str(amount) + currency + ' to ' + to_exchange + ' at address ' + withdrawAdr)
-				gdax_handler.withdrawToAddress(withdrawAdr, currency, amount)
+				gdax_handler.withdrawToAddress(withdrawAdr, to_exchange, currency, amount)
 
 		elif (to_exchange == 'Poloniex'):
 			withdrawAdr = ''
@@ -174,7 +212,7 @@ def withdraw(from_exchange, to_exchange, currency, amount):
 				sys.exit('There was a withdrawal error. Withdrawal address was not set.')
 			else:
 				print('Withdrawing from ' + from_exchange + ': ' + str(amount) + currency + ' to ' + to_exchange + ' at address ' + withdrawAdr)
-				gdax_handler.withdrawToAddress(withdrawAdr, currency, amount)
+				gdax_handler.withdrawToAddress(withdrawAdr, to_exchange, currency, amount)
 		else:
 			sys.exit('There was a withdrawal error. The from_exchange was ' + from_exchange + ', the to_exchange is not valid: ' + to_exchange)
 
@@ -197,7 +235,7 @@ def withdraw(from_exchange, to_exchange, currency, amount):
 			else:
 				print('Withdrawing from ' + from_exchange + ': ' + str(amount) + currency + ' to ' + to_exchange)
 				# Kraken Handler takes name of address (in this case 'GDAX' as argument)
-				kraken_handler.withdrawToAddress(to_exchange, currency, amount)
+				kraken_handler.withdrawToAddress('', to_exchange, currency, amount)
 		else:
 			sys.exit('There was a withdrawal error. The from_exchange was ' + from_exchange + ', the to_exchange is not valid: ' + to_exchange)
 
@@ -219,7 +257,7 @@ def withdraw(from_exchange, to_exchange, currency, amount):
 				sys.exit('There was a withdrawal error. Withdrawal address was not set.')
 			else:
 				print('Withdrawing from ' + from_exchange + ': ' + str(amount) + currency + ' to ' + to_exchange + ' at address ' + withdrawAdr)
-				poloniex_handler.withdrawToAddress(withdrawAdr, currency, amount)
+				poloniex_handler.withdrawToAddress(withdrawAdr, to_exchange, currency, amount)
 		else:
 			sys.exit('There was a withdrawal error. The from_exchange was ' + from_exchange + ', the to_exchange is not valid: ' + to_exchange)
 	else:
@@ -244,8 +282,8 @@ def checkProfitability(baseCur, buyCur, buyFee, sellFee, baseCurTransferFee, buy
 	buyCurrencyAmount = gdax_handler.checkFunds(buyCur)
 
 	# For testing purposes
-	# baseCurrencyAmount = 5
-	# buyCurrencyAmount = 300
+	#baseCurrencyAmount = 5
+	#buyCurrencyAmount = 300
 
 	print('Have ' + str(baseCurrencyAmount) + baseCur + ' on ' + buyExchange)
 	print('Have ' + str(buyCurrencyAmount) + buyCur + ' on ' + sellExchange)
@@ -292,6 +330,10 @@ def checkProfitability(baseCur, buyCur, buyFee, sellFee, baseCurTransferFee, buy
 		couldBeBought = baseCurrencyAmount / buy_rate * (1 - buyFee)
 		couldBeSold = buyCurrencyAmount * sell_rate * (1 - sellFee) # Amount of base currency to be bought in sell operation on sellExchange
 
+		# Round down, 6 digits
+		#couldBeBought = round(couldBeBought - float(5e-7), 6)
+		#couldBeSold = round(couldBeSold - float(5e-7), 6)
+
 		print('Could buy ' + str(couldBeBought) + buyCur + ' on ' + buyExchange)
 		print('Could sell ' + buyCur + ' to get ' + str(couldBeSold) + baseCur + ' on ' + sellExchange)
 
@@ -306,12 +348,12 @@ def checkProfitability(baseCur, buyCur, buyFee, sellFee, baseCurTransferFee, buy
 		buyCurProfit = buyCurAfterTransfer/buyCurrencyAmount
 		baseCurProfit = baseCurAfterTransfer/baseCurrencyAmount
 
-		print('This is a profit of ' + str(((buyCurProfit - 1) * 100)) + '% in ' + buyCur)
-		print('This is a profit of ' + str(((baseCurProfit - 1) * 100)) + '% in ' + baseCur)
+		print('This is a profit of ' + str(((buyCurProfit - 1) * 100)) + '% \in ' + buyCur)
+		print('This is a profit of ' + str(((baseCurProfit - 1) * 100)) + '% \in ' + baseCur)
 
-		# We want both profits to be definitely positive and at least one of them should be more than 0.1%
+		# We want both profits to be definitely positive and at least one of them should be more than 0.15%
 		# This is a little redundant since from the above calculations it will follow that profits are symmetric on both exchanges
-		if (((buyCurProfit >= 1) & (baseCurProfit >= 1)) & ((buyCurProfit > 1.001) | (baseCurProfit > 1.001))):
+		if (((buyCurProfit >= 1) & (baseCurProfit >= 1)) & ((buyCurProfit > 1.0015) | (baseCurProfit > 1.0015))):
 			print('Process is profitable!')
 			return [buy_rate, sell_rate, baseCurrencyAmount, buyCurrencyAmount, couldBeBought, couldBeSold] # which means 'profitable'
 		else:
@@ -352,7 +394,11 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 	# Only continue if the rates match with the current prices.
 	# Otherwise the program was not fast enough. Start all over
 
-	[current_buy_price, current_sell_price] = getAllPrices(baseCur, buyCur, buyExchange, sellExchange)
+	[current_buy_price, current_sell_price] = getAllPrices(baseCurrency, buyCurrency, buyExchange, sellExchange)
+
+	# Round down, 6 digits
+	#current_buy_price = round(current_buy_price - float(5e-7), 6)
+	#current_sell_price = round(current_sell_price - float(5e-7), 6)
 
 	if ((current_buy_price > desired_buy) | (current_sell_price < desired_sell)):
 		# If the buy price has risen or the sell rate has dropped it cannot
@@ -361,6 +407,7 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 		print('Damnit!!! I wasn\'t fast enough to respond to the price difference :(. I will try again immediately...')
 		main()
 
+	print('Good. The current rates have, if at all, changed to the good: Buy Rate: ' + str(current_buy_price) + ', Sell Rate: ' + str(current_sell_price))
 	# Cancel all orders for the given currency pair (safety)
 	if (sellExchange == 'GDAX'):
 		print('Canceling all orders on ' + sellExchange + ' for ' + buyCurrency + '-' + baseCurrency)
@@ -396,7 +443,8 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 	###########################################################################
 	'''
 
-	trade_result = performArbitrageTrade(baseCur, buyCur, could_be_bought, desired_buyCurrencyAmount, current_buy_price, current_sell_price, buyExchange, sellExchange)
+	trade_result = performArbitrageTrade(baseCurrency, buyCurrency, could_be_bought, desired_buyCurrencyAmount, current_buy_price, current_sell_price, buyExchange, sellExchange)
+
 
 	if (trade_result == [0, 0]):
 		sys.exit('Trade was unsuccessful.')
@@ -456,20 +504,6 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 
 def main():
 
-	#############################
-	# Parameters - Change these if wanted
-
-	baseCurrency = 'BTC'
-	buyCurrency = 'LTC'
-	buyFee = 0.0026 # Taker Fee - Kraken - LTC/BTC
-	sellFee = 0.000 # Maker Fee - GDAX - LTC/BTC
-	baseCurrencyTransferFee = 0.000 # Withdraw Fee - GDAX - BTC
-	buyCurrencyTransferFee = 0.001 # Withdraw Fee - Kraken - LTC
-	buyExchange = 'Kraken' # Alternatively 'Poloniex'
-	sellExchange = 'GDAX' # DO NOT CHANGE!!!!
-
-	#############################
-
 	rates_if_profitable = checkProfitability(baseCurrency, buyCurrency, buyFee, sellFee, baseCurrencyTransferFee, buyCurrencyTransferFee, buyExchange, sellExchange)
 
 	print('Rates if profitable: ' + str(rates_if_profitable))
@@ -479,7 +513,7 @@ def main():
 
 		#############################
 		# Check again in ...
-		check_interval = 300
+		check_interval = 10
 		# ...seconds
 		#############################
 		print('Sleeping for ' + str(check_interval) + 's...')
@@ -487,7 +521,7 @@ def main():
 		main()
 	else:
 		print('Trading the arbitrage')
-		#tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_if_profitable)
+		tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_if_profitable)
 
 
 if __name__ == "__main__":
