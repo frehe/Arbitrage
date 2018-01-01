@@ -2,6 +2,9 @@
 import gdax
 import json
 import base64, hashlib, hmac, time, sys
+import arbitrage_trader
+import numpy as np
+from random import randint
 
 api_key = ''
 api_passphrase = ''
@@ -31,26 +34,22 @@ def priceCheck(pair):
 #######################################################################################
 
 
-def performTrade(pair,buy_sell,type):
-	"Perform a trade on gdax"
-	return 11
-
-
-#######################################################################################
-
-
 def checkFunds(currency):
 	"Obtain balance on gdax for a given currency"
 
 	print("Checking funds on GDAX: " + currency)
 
-	all_accounts = auth_client.get_accounts()
-	# There are (currently) 5 currencies on GDAX wallets:
-	for current_account in all_accounts:
-		if (current_account['currency'] == currency):
-			return float(current_account['balance'])
+	if (arbitrage_trader.backtesting == True):
+		with open('GDAX_fake_account.json', 'r') as fp:
+			return float(json.load(fp)[currency])
+	else:
+		all_accounts = auth_client.get_accounts()
+		# There are (currently) 5 currencies on GDAX wallets:
+		for current_account in all_accounts:
+			if (current_account['currency'] == currency):
+				return float(current_account['balance'])
 
-	sys.exit('Error trying to obtain current funds ' + currency + ' on GDAX')
+		sys.exit('Error trying to obtain current funds ' + currency + ' on GDAX')
 
 
 #######################################################################################
@@ -67,33 +66,79 @@ def getQuoteIncrement(tradingPair):
 
 
 def buyLimitTrade(b_price, b_size, b_product):
-	if (b_product == 'LTC-BTC'):
-		return auth_client.buy(price = b_price, size = b_size, product_id = b_product, type = 'limit', post_only = True)
+	if (arbitrage_trader.backtesting == True):
+		with open('GDAX_fake_account.json', 'r') as fp:
+			data = json.load(fp)
+			buyCur = b_product[:3]
+			baseCur = b_product[4:]
+			new_buy_cur_val = data[buyCur] + b_size
+			new_base_cur_val = data[baseCur] - b_size * b_price
+			time.sleep(randint(2,40))
+		with open('GDAX_fake_account.json', 'w') as fp:
+			data[buyCur] = new_buy_cur_val
+			data[baseCur] = new_base_cur_val
+			json.dump(data, fp)
 	else:
-		sys.exit('Error generating limit sell trade on GDAX')
+		if (b_product == 'LTC-BTC'):
+			return auth_client.buy(price = b_price, size = b_size, product_id = b_product, type = 'limit', post_only = True)
+		else:
+			sys.exit('Error generating limit sell trade on GDAX')
 
 def sellLimitTrade(s_price, s_size, s_product):
-	if (s_product == 'LTC-BTC'):
-		return auth_client.sell(price = s_price, size = s_size, product_id = s_product, type = 'limit', post_only = True)
+	if (arbitrage_trader.backtesting == True):
+		with open('GDAX_fake_account.json', 'r') as fp:
+			data = json.load(fp)
+			buyCur = b_product[:3]
+			baseCur = b_product[4:]
+			new_buy_cur_val = data[buyCur] - s_size
+			new_base_cur_val = data[baseCur] + s_size * s_price
+			time.sleep(randint(2,40))
+		with open('GDAX_fake_account.json', 'w') as fp:
+			data[buyCur] = new_buy_cur_val
+			data[baseCur] = new_base_cur_val
+			json.dump(data, fp)
 	else:
-		sys.exit('Error generating limit sell trade on GDAX')
+		if (s_product == 'LTC-BTC'):
+			return auth_client.sell(price = s_price, size = s_size, product_id = s_product, type = 'limit', post_only = True)
+		else:
+			sys.exit('Error generating limit sell trade on GDAX')
 
 def cancelOrders(product_identifier):
 	return auth_client.cancel_all(product = product_identifier)
 
 def getOrderInfo(order_id):
-	return auth_client.get_order(order_id)
+	if (arbitrage_trader.backtesting == True):
+		return True
+	else:
+		return auth_client.get_order(order_id)
 
 def withdrawToCoinbase(cur, amount):
 	pass
 
-def withdrawToAdress(adr, cur, amount):
+def withdrawToAdress(adr, to_exchange, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
-	print('Withdrawing ' + str(amount) + cur + ' to ' + adr)
+	print('Withdrawing ' + str(amount) + cur + ' to ' + to_exchange + ' at ' + adr)
 
-	result = auth_client.crypto_withdraw(amount = str(amount), currency = cur, crypto_address = adr)
-	print(str(result))
+	if (arbitrage_trader.backtesting == True):
+		# Remove fake funds from GDAX
+		with open('GDAX_fake_account.json', 'r') as fp:
+			data = json.load(fp)
+			new_cur_val = data[cur] - amount
+		with open('GDAX_fake_account.json', 'w') as fp:
+			data[cur] = new_cur_val
+			json.dump(data, fp)
+		# Send fake funds to to_exchange
+		with open(to_exchange + '_fake_account.json', 'r') as fp:
+			data = json.load(fp)
+			new_cur_val = data[cur] + amount - arbitrage_trader.baseCurrencyTransferFee
+		with open(to_exchange + '_fake_account.json', 'w') as fp:
+			data[cur] = new_cur_val
+			json.dump(data, fp)
+
+	else:
+		result = auth_client.crypto_withdraw(amount = str(amount), currency = cur, crypto_address = adr)
+		print(str(result))
 
 
 #######################################################################################
