@@ -121,6 +121,7 @@ def checkFunds(currency):
 
 #######################################################################################
 
+'''
 def main():
 	#result = buyTakerTrade(0.1, "LTCXBT")
 	#print('Result: ' + str(result))
@@ -132,3 +133,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+'''

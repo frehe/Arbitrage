@@ -144,7 +144,7 @@ def withdrawToAdress(adr, to_exchange, cur, amount):
 #######################################################################################
 
 
-
+'''
 def main():
 	#prices = priceCheck('LTC-EUR')
 	#print(prices)
@@ -159,3 +159,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+'''

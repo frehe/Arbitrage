@@ -26,7 +26,6 @@ def priceCheck(pair):
 		lowest_ask = float(k.get_ticker_information("LTCXBT")['a'][0][0])
 	else:
 		sys.exit('Could not get kraken price data for ' + pair)
-		#highest_bid = lowest_ask = 0
 
 	result = [highest_bid, lowest_ask]
 	return result
