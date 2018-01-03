@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import krakenex
 from pykrakenapi import KrakenAPI
-import sys, json
+import sys, json, time
 import arbitrage_trader
 import numpy as np
 from random import randint
@@ -59,8 +59,8 @@ def sellTakerTrade(s_price, s_size, s_product):
 	if (arbitrage_trader.backtesting == True):
 		with open('Kraken_fake_account.json', 'r') as fp:
 			data = json.load(fp)
-			buyCur = b_product[:3]
-			baseCur = b_product[4:]
+			buyCur = s_product[:3]
+			baseCur = s_product[4:]
 			new_buy_cur_val = data[buyCur] - s_size
 			new_base_cur_val = data[baseCur] + s_size * s_price - arbitrage_trader.buyFee * s_size * s_price
 			time.sleep(randint(2,40))
@@ -82,7 +82,7 @@ def cancelOrders(product_identifier):
 def getOrderInfo(order_id):
  	print('nothing')
 
-def withdrawToAdress(adr, to_exchange, cur, amount):
+def withdrawToAddress(adr, to_exchange, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
 	print('Withdrawing ' + str(amount) + cur + ' to ' + to_exchange + ' at ' + adr)
@@ -173,7 +173,7 @@ def main():
 	#result = buyTakerTrade(0.1, "LTCXBT")
 	#print('Result: ' + str(result))
 	print('LTC funds: ' + str(checkFunds('LTC')))
-	#withdrawToAdress('GDAX', 'LTC', 0.0011)
+	#withdrawToAddress('GDAX', 'LTC', 0.0011)
 
 
 if __name__ == "__main__":

@@ -38,12 +38,12 @@ accumulate data as {'BTC': 0.0, 'LTC': 0.0, 'ETH': 0.0, 'BCH': 0.0, 'EUR': 0.0}
 
 # GDAX
 GDAX_BTC_whitelistedWithdrawAddress = ''
-GDAX_LTC_whitelistedWithdrawAddress = 'LauE97bMZgRXabd9oG22bDVsVHoSVWNhjj'
+GDAX_LTC_whitelistedWithdrawAddress = ''
 GDAX_ETH_whitelistedWithdrawAddress = ''
 GDAX_BCH_whitelistedWithdrawAddress = ''
 
 # Kraken
-Kraken_BTC_whitelistedWithdrawAddress = '3KJS1E4jRmhgz9Z9mPnb39HSunG12Tfhmy'
+Kraken_BTC_whitelistedWithdrawAddress = ''
 Kraken_LTC_whitelistedWithdrawAddress = ''
 Kraken_ETH_whitelistedWithdrawAddress = ''
 Kraken_BCH_whitelistedWithdrawAddress = ''
@@ -112,13 +112,20 @@ def performArbitrageTrade(baseCur, buyCur, buy_amount, sell_amount, buyPrice, se
 	buy_id = 0
 	if (buyExchange == 'Kraken'):
 		buy_message = kraken_handler.buyTakerTrade(buyPrice, buy_amount, buyCur + '-' + baseCur)
-		print('Buy message: ' + str(buy_message))
-		buy_id = buy_message['descr']
-		print(buy_id)
+		if (backtesting == False):
+			print('Buy message: ' + str(buy_message))
+			buy_id = buy_message['descr']
+			print(buy_id)
+		else:
+			buy_id = 1
 	elif (buyExchange == 'Poloniex'):
 		buy_message = poloniex_handler.buyTrade(buyPrice, buy_amount, buyCur + '-' + baseCur)
-		print('Buy message: ' + str(buy_message))
-		buy_id = buy_message
+		if (backtesting == False):
+			print('Buy message: ' + str(buy_message))
+			buy_id = buy_message
+			print(buy_id)
+		else:
+			buy_id = 1
 	else:
 		sys.exit('Could not recognize buyExchange during trade')
 
@@ -127,8 +134,11 @@ def performArbitrageTrade(baseCur, buyCur, buy_amount, sell_amount, buyPrice, se
 	if (sellExchange == 'GDAX'):
 		sell_amount = round(sell_amount - float(5e-7), 6)
 		sell_message = gdax_handler.sellLimitTrade(sellPrice, sell_amount, buyCur + '-' + baseCur)
-		print('Sell message: ' + str(sell_message))
-		sell_id = sell_message['id']
+		if (backtesting == False):
+			print('Sell message: ' + str(sell_message))
+			sell_id = sell_message['id']
+		else:
+			sell_id = 1
 	else:
 		sys.exit('Could not recognize sellExchange during trade')
 
@@ -163,7 +173,10 @@ def checkBackOnOrders(buy_id, sell_id, buyExchange, sellExchange):
 	'''
 	buy_status = True
 
-	sell_status = gdax_handler.getOrderInfo(sell_id)['settled']
+	if (backtesting == False):
+		sell_status = gdax_handler.getOrderInfo(sell_id)['settled']
+	else:
+		sell_status = gdax_handler.getOrderInfo(sell_id)
 
 	print('Buy settled (presumably since taker order) on ' + buyExchange + ': ' + str(buy_status) + ', Sell settled on ' + sellExchange + ': ' + str(sell_status))
 
@@ -351,9 +364,9 @@ def checkProfitability(baseCur, buyCur, buyFee, sellFee, baseCurTransferFee, buy
 		print('This is a profit of ' + str(((buyCurProfit - 1) * 100)) + '% \in ' + buyCur)
 		print('This is a profit of ' + str(((baseCurProfit - 1) * 100)) + '% \in ' + baseCur)
 
-		# We want both profits to be definitely positive and at least one of them should be more than 0.15%
+		# We want both profits to be definitely positive and at least one of them should be more than 0.1%
 		# This is a little redundant since from the above calculations it will follow that profits are symmetric on both exchanges
-		if (((buyCurProfit >= 1) & (baseCurProfit >= 1)) & ((buyCurProfit > 1.0015) | (baseCurProfit > 1.0015))):
+		if (((buyCurProfit >= 1) & (baseCurProfit >= 1)) & ((buyCurProfit > 1.000) | (baseCurProfit > 1.000))):
 			print('Process is profitable!')
 			return [buy_rate, sell_rate, baseCurrencyAmount, buyCurrencyAmount, couldBeBought, couldBeSold] # which means 'profitable'
 		else:
@@ -400,6 +413,8 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 	#current_buy_price = round(current_buy_price - float(5e-7), 6)
 	#current_sell_price = round(current_sell_price - float(5e-7), 6)
 
+	print('Current buy rate: ' + str(current_buy_price) + ', Current sell rate: ' + str(current_sell_price))
+
 	if ((current_buy_price > desired_buy) | (current_sell_price < desired_sell)):
 		# If the buy price has risen or the sell rate has dropped it cannot
 		# be guaranteed that the trade is still profitable
@@ -407,7 +422,7 @@ def tradeArbitrage(baseCurrency, buyCurrency, buyExchange, sellExchange, rates_i
 		print('Damnit!!! I wasn\'t fast enough to respond to the price difference :(. I will try again immediately...')
 		main()
 
-	print('Good. The current rates have, if at all, changed to the good: Buy Rate: ' + str(current_buy_price) + ', Sell Rate: ' + str(current_sell_price))
+	print('Good. The current rates have, if at all, changed to the good')
 	# Cancel all orders for the given currency pair (safety)
 	if (sellExchange == 'GDAX'):
 		print('Canceling all orders on ' + sellExchange + ' for ' + buyCurrency + '-' + baseCurrency)

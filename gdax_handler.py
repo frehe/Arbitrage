@@ -88,8 +88,8 @@ def sellLimitTrade(s_price, s_size, s_product):
 	if (arbitrage_trader.backtesting == True):
 		with open('GDAX_fake_account.json', 'r') as fp:
 			data = json.load(fp)
-			buyCur = b_product[:3]
-			baseCur = b_product[4:]
+			buyCur = s_product[:3]
+			baseCur = s_product[4:]
 			new_buy_cur_val = data[buyCur] - s_size
 			new_base_cur_val = data[baseCur] + s_size * s_price
 			time.sleep(randint(2,40))
@@ -115,7 +115,7 @@ def getOrderInfo(order_id):
 def withdrawToCoinbase(cur, amount):
 	pass
 
-def withdrawToAdress(adr, to_exchange, cur, amount):
+def withdrawToAddress(adr, to_exchange, cur, amount):
 	"Double check every withdrawal to be sure and then withdraw"
 
 	print('Withdrawing ' + str(amount) + cur + ' to ' + to_exchange + ' at ' + adr)
